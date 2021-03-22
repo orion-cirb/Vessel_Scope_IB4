@@ -182,7 +182,7 @@ private BufferedWriter output_dotCalib;
                     }
                     else {                        
                         // Open Gene reference channel
-                        System.out.println("Opening gene channel ...");
+                        System.out.println("Opening "+rootName+" ...");
                         ImagePlus img = IJ.openImage(imageName);
                         RoiManager rm = new RoiManager(false);
                         rm.runCommand("Open", roiFile);
@@ -217,16 +217,15 @@ private BufferedWriter output_dotCalib;
                             // for all rois
                             // find background associated to dot
                             double sumCorIntDots = 0;
-                            for (int r = 0; r < rm.getCount(); r++) {
-                                Roi roi = rm.getRoi(r);
-                                Dot dot = dots.get(r);
+                            for (Dot dot : dots) {
+                                Roi roi = rm.getRoi(dot.getIndex());
                                 img.setRoi(roi);
                                 ImagePlus imgCrop = img.crop("stack");
                                 double bgDotInt = find_background(imgCrop, dot.getZmin(), dot.getZmax());
                                 double corIntDot = dot.getIntDot() - (bgDotInt * dot.getVolDot());
                                 sumCorIntDots += corIntDot;
                                 // write results
-                                output_dotCalib.write(rootName+"\t"+r+"\t"+dot.getVolDot()+"\t"+dot.getIntDot()+"\t"+bgDotInt+"\t"+corIntDot+
+                                output_dotCalib.write(rootName+"\t"+dot.getIndex()+"\t"+dot.getVolDot()+"\t"+dot.getIntDot()+"\t"+bgDotInt+"\t"+corIntDot+
                                         "\t"+dot.getZCenter()+"\t"+(dot.getZmax()-dot.getZmin())+"\n");
                                 output_dotCalib.flush();
                                 closeImages(imgCrop);
