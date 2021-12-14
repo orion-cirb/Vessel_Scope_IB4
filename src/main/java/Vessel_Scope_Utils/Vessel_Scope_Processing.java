@@ -2,19 +2,10 @@ package Vessel_Scope_Utils;
 
 
 
-import static Vessel_Scope.Vessel_Scope_Main.autoBackground;
-import static Vessel_Scope.Vessel_Scope_Main.cal;
-import static Vessel_Scope.Vessel_Scope_Main.calibBgGeneX;
-import static Vessel_Scope.Vessel_Scope_Main.maxVesselVol;
-import static Vessel_Scope.Vessel_Scope_Main.minVesselVol;
-import static Vessel_Scope.Vessel_Scope_Main.output_detail_Analyze;
-import static Vessel_Scope.Vessel_Scope_Main.roiBgSize;
-import static Vessel_Scope.Vessel_Scope_Main.singleDotIntGeneX;
-import static Vessel_Scope.Vessel_Scope_Main.thMethod;
+import Vessel_Scope.Vessel_Scope_Main;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
-import ij.gui.WaitForUserDialog;
 import ij.io.FileSaver;
 import ij.measure.Calibration;
 import ij.measure.Measurements;
@@ -47,7 +38,6 @@ import mcib3d.image3d.processing.FastFilters3D;
 import mcib3d.image3d.regionGrowing.Watershed3D;
 import net.haesleinhuepf.clij.clearcl.ClearCLBuffer;
 import net.haesleinhuepf.clij2.CLIJ2;
-import org.apache.tools.ant.taskdefs.WaitFor;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -63,15 +53,15 @@ import org.xml.sax.SAXException;
 
 public class Vessel_Scope_Processing {
     
-    public static CLIJ2 clij2 = CLIJ2.getInstance();
-    
+    private CLIJ2 clij2 = CLIJ2.getInstance();
+    private Vessel_Scope.Vessel_Scope_Main main = new Vessel_Scope_Main();
     
     
      /**
      * check  installed modules
      * @return 
      */
-    public static boolean checkInstalledModules() {
+    public boolean checkInstalledModules() {
         // check install
         ClassLoader loader = IJ.getClassLoader();
         try {
@@ -95,7 +85,7 @@ public class Vessel_Scope_Processing {
      *
      * @param img
      */
-    public static void closeImages(ImagePlus img) {
+    public void closeImages(ImagePlus img) {
         img.flush();
         img.close();
     }
@@ -108,12 +98,12 @@ public class Vessel_Scope_Processing {
      * @return pop
      */
 
-    private static Objects3DPopulation getPopFromClearBuffer(ClearCLBuffer imgCL) {
+    private Objects3DPopulation getPopFromClearBuffer(ClearCLBuffer imgCL) {
         ClearCLBuffer output = clij2.create(imgCL);
         clij2.connectedComponentsLabelingBox(imgCL, output);
         clij2.release(imgCL);
         ImagePlus imgLab  = clij2.pull(output);
-        imgLab.setCalibration(cal);
+        imgLab.setCalibration(main.cal);
         ImageInt labels = new ImageLabeller().getLabels(ImageHandler.wrap(imgLab));
         Objects3DPopulation pop = new Objects3DPopulation(labels);
         clij2.release(output);
@@ -147,7 +137,7 @@ public class Vessel_Scope_Processing {
      * @param sizeZ
      * @return imgOut
      */ 
-    public static ClearCLBuffer medianFilter(ClearCLBuffer imgCL, double sizeX, double sizeY, double sizeZ) {
+    public ClearCLBuffer medianFilter(ClearCLBuffer imgCL, double sizeX, double sizeY, double sizeZ) {
         ClearCLBuffer imgOut = clij2.create(imgCL);
         clij2.median3DBox(imgCL, imgOut, sizeX, sizeY, sizeZ);
         clij2.release(imgCL);
@@ -166,7 +156,7 @@ public class Vessel_Scope_Processing {
      * @param sizeZ2
      * @return imgGauss
      */ 
-    public static ClearCLBuffer DOG(ClearCLBuffer imgCL, double sizeX1, double sizeY1, double sizeZ1, double sizeX2, double sizeY2, double sizeZ2) {
+    public ClearCLBuffer DOG(ClearCLBuffer imgCL, double sizeX1, double sizeY1, double sizeZ1, double sizeX2, double sizeY2, double sizeZ2) {
         ClearCLBuffer imgCLDOG = clij2.create(imgCL);
         clij2.differenceOfGaussian3D(imgCL, imgCLDOG, sizeX1, sizeY1, sizeZ1, sizeX2, sizeY2, sizeZ2);
         clij2.release(imgCL);
@@ -177,7 +167,7 @@ public class Vessel_Scope_Processing {
      * Fill hole
      * USING CLIJ2
      */
-    private static void fillHole(ClearCLBuffer imgCL) {
+    private void fillHole(ClearCLBuffer imgCL) {
         long[] dims = clij2.getDimensions(imgCL);
         ClearCLBuffer slice = clij2.create(dims[0], dims[1]);
         ClearCLBuffer slice_filled = clij2.create(slice);
@@ -197,7 +187,7 @@ public class Vessel_Scope_Processing {
    * @param imgCL
    * @return imgCLOut
    */
-    private static ClearCLBuffer open(ClearCLBuffer imgCL) {
+    private ClearCLBuffer open(ClearCLBuffer imgCL) {
         ClearCLBuffer imgCLOut = clij2.create(imgCL);
         clij2.openingBox(imgCL, imgCLOut, 1);
         clij2.release(imgCL);
@@ -211,7 +201,7 @@ public class Vessel_Scope_Processing {
      * @param thMed
      * @param fill 
      */
-    public static ClearCLBuffer threshold(ClearCLBuffer imgCL, String thMed, boolean fill) {
+    public ClearCLBuffer threshold(ClearCLBuffer imgCL, String thMed, boolean fill) {
         ClearCLBuffer imgCLBin = clij2.create(imgCL);
         clij2.automaticThreshold(imgCL, imgCLBin, thMed);
         if (fill)
@@ -223,7 +213,7 @@ public class Vessel_Scope_Processing {
     /**
      * Fill rois with zero
      */
-    private static ClearCLBuffer fillImg(ClearCLBuffer imgCL, ArrayList<Roi> rois) {
+    private ClearCLBuffer fillImg(ClearCLBuffer imgCL, ArrayList<Roi> rois) {
         ImagePlus img = clij2.pull(imgCL);
         img.getProcessor().setColor(Color.BLACK);
         for (int s = 1; s <= img.getNSlices(); s++) {
@@ -245,11 +235,11 @@ public class Vessel_Scope_Processing {
      * Ib4cyte Cell
      * 
      */
-    private static Objects3DPopulation detectIb4(ImagePlus imgVessel, ArrayList<Roi> rois) {
+    private Objects3DPopulation detectIb4(ImagePlus imgVessel, ArrayList<Roi> rois) {
         ImagePlus img = new Duplicator().run(imgVessel);
         ClearCLBuffer imgCL = clij2.push(img);
         ClearCLBuffer imgCLMed = medianFilter(imgCL, 2, 2, 2);
-        ClearCLBuffer imgCLBin = threshold(imgCLMed, thMethod, false);
+        ClearCLBuffer imgCLBin = threshold(imgCLMed, main.thMethod, false);
         Objects3DPopulation ib4Pop = new Objects3DPopulation();
         if (!rois.isEmpty()) {
             ClearCLBuffer fillImg = fillImg(imgCLBin, rois);
@@ -269,7 +259,7 @@ public class Vessel_Scope_Processing {
      * @param imgGeneRef
      * @return genePop
      */
-    public static Objects3DPopulation findGenePop(ImagePlus imgGeneRef, ArrayList<Roi> rois) {
+    public Objects3DPopulation findGenePop(ImagePlus imgGeneRef, ArrayList<Roi> rois) {
         ImagePlus img = new Duplicator().run(imgGeneRef);
         ClearCLBuffer imgCL = clij2.push(img);
         ClearCLBuffer imgCLMed = medianFilter(imgCL, 1, 1, 1);
@@ -291,7 +281,7 @@ public class Vessel_Scope_Processing {
     /**
      * ramdom color nucleus population
      */
-    public static ImagePlus colorPop (Objects3DPopulation cellsPop,  ImagePlus img) {
+    public ImagePlus colorPop (Objects3DPopulation cellsPop,  ImagePlus img) {
         //create image objects population
         Font tagFont = new Font("SansSerif", Font.PLAIN, 30);
         ImageHandler imgObj = ImageInt.wrap(img).createSameDimensions();
@@ -323,7 +313,7 @@ public class Vessel_Scope_Processing {
      * @param imgGeneX
      */
     
-    public static ArrayList<Cell> tagsCells(Objects3DPopulation cellsPop, Objects3DPopulation dotsXPop, ImagePlus imgGeneX, Roi roiBgGeneX) {
+    public ArrayList<Cell> tagsCells(Objects3DPopulation cellsPop, Objects3DPopulation dotsXPop, ImagePlus imgGeneX, Roi roiBgGeneX) {
         
         IJ.showStatus("Finding cells with gene reference ...");
         ArrayList<Cell> cells = new ArrayList<>();
@@ -359,7 +349,7 @@ public class Vessel_Scope_Processing {
                 bgGeneX = find_background(imgGeneXCrop, cellMinZ, cellMaxZ);
             }
             else {
-                bgGeneX = calibBgGeneX;
+                bgGeneX = main.calibBgGeneX;
             } 
             //System.out.println("Mean Background  ref = " + bgGeneRef + " zmin "+cellMinZ+" zmax "+cellMaxZ);
             //System.out.println("Mean Background  X = " + bgGeneX);
@@ -375,10 +365,10 @@ public class Vessel_Scope_Processing {
                 }
             }
             // dots number based on cell intensity
-            int nbGeneXDotsCellInt = Math.round((float)((cellGeneXInt - bgGeneX * cellVol) / singleDotIntGeneX));
+            int nbGeneXDotsCellInt = Math.round((float)((cellGeneXInt - bgGeneX * cellVol) / main.singleDotIntGeneX));
             
             // dots number based on dots segmented intensity
-            int nbGeneXDotsSegInt = Math.round((float)((geneXDotsInt - bgGeneX * geneXDotsVol) / singleDotIntGeneX));
+            int nbGeneXDotsSegInt = Math.round((float)((geneXDotsInt - bgGeneX * geneXDotsVol) / main.singleDotIntGeneX));
             
             Cell cell = new Cell(index, cellVol, zCell, cellGeneXInt,
                     bgGeneX, geneXDotsVol, geneXDotsInt, nbGeneXDotsCellInt, nbGeneXDotsSegInt);
@@ -390,19 +380,19 @@ public class Vessel_Scope_Processing {
     
     
     
-    public  static Objects3DPopulation findVessel(ImagePlus imgVessel, ArrayList<Roi> rois) {
+    public  Objects3DPopulation findVessel(ImagePlus imgVessel, ArrayList<Roi> rois) {
         Objects3DPopulation VesselPopOrg = new Objects3DPopulation();
         VesselPopOrg = detectIb4(imgVessel, rois);
         System.out.println("-- Total Vessel Population :"+VesselPopOrg.getNbObjects());
         // size filter
-        Objects3DPopulation cellsPop = new Objects3DPopulation(VesselPopOrg.getObjectsWithinVolume(minVesselVol, maxVesselVol, false));
+        Objects3DPopulation cellsPop = new Objects3DPopulation(VesselPopOrg.getObjectsWithinVolume(main.minVesselVol, main.maxVesselVol, false));
         int nbCellPop = cellsPop.getNbObjects();
         System.out.println("-- Total Vessel Population after size filter: "+ nbCellPop);
         return(cellsPop);
     }
     
 
-    private static ImagePlus WatershedSplit(ImagePlus binaryMask, float rad) {
+    private ImagePlus WatershedSplit(ImagePlus binaryMask, float rad) {
         float resXY = 1;
         float resZ = 1;
         float radXY = rad;
@@ -435,15 +425,15 @@ public class Vessel_Scope_Processing {
      * @param size
      * @return 
      */
-    public static Roi findRoiBackgroundAuto(ImagePlus img, double bgGene) {
+    public Roi findRoiBackgroundAuto(ImagePlus img, double bgGene) {
         // scroll gene image and measure bg intensity in roi 
         // take roi at intensity nearest from bgGene
         
         ArrayList<RoiBg> intBgFound = new ArrayList<RoiBg>();
         
-        for (int x = 0; x < img.getWidth() - roiBgSize; x += roiBgSize) {
-            for (int y = 0; y < img.getHeight() - roiBgSize; y += roiBgSize) {
-                Roi roi = new Roi(x, y, roiBgSize, roiBgSize);
+        for (int x = 0; x < img.getWidth() - main.roiBgSize; x += main.roiBgSize) {
+            for (int y = 0; y < img.getHeight() - main.roiBgSize; y += main.roiBgSize) {
+                Roi roi = new Roi(x, y, main.roiBgSize, main.roiBgSize);
                 img.setRoi(roi);
                 ImagePlus imgCrop = img.crop("stack");
                 double bg = find_background(imgCrop, 1, img.getNSlices());
@@ -467,8 +457,8 @@ public class Vessel_Scope_Processing {
                 roiBg = v.getRoi();
             }
         }
-        int roiCenterX = roiBg.getBounds().x+(roiBgSize/2);
-        int roiCenterY = roiBg.getBounds().y+(roiBgSize/2);
+        int roiCenterX = roiBg.getBounds().x+(main.roiBgSize/2);
+        int roiCenterY = roiBg.getBounds().y+(main.roiBgSize/2);
         System.out.println("Roi auto background found = "+closest+" center x = "+roiCenterX+", y = "+roiCenterY);
         return(roiBg);
     }
@@ -477,7 +467,7 @@ public class Vessel_Scope_Processing {
     /*
     * Get Mean of intensity in stack
     */
-    public static double find_background(ImagePlus img, int zMin, int zMax) {
+    public double find_background(ImagePlus img, int zMin, int zMax) {
         ResultsTable rt = new ResultsTable();
         Analyzer ana = new Analyzer(img, Measurements.INTEGRATED_DENSITY, rt);
         double intDen = 0;
@@ -500,7 +490,7 @@ public class Vessel_Scope_Processing {
      * @param popObj
      * @param img 
      */
-    public static void labelsObject (Objects3DPopulation popObj, ImagePlus img, int fontSize) {
+    public void labelsObject (Objects3DPopulation popObj, ImagePlus img, int fontSize) {
         Font tagFont = new Font("SansSerif", Font.PLAIN, fontSize);
         String name;
         for (int n = 0; n < popObj.getNbObjects(); n++) {
@@ -527,7 +517,7 @@ public class Vessel_Scope_Processing {
      * @throws SAXException
      * @throws IOException 
      */
-    public static ArrayList<Point3D> readXML(String xmlFile) throws ParserConfigurationException, SAXException, IOException {
+    public ArrayList<Point3D> readXML(String xmlFile) throws ParserConfigurationException, SAXException, IOException {
         ArrayList<Point3D> ptList = new ArrayList<>();
         double x = 0, y = 0 ,z = 0;
         File fXmlFile = new File(xmlFile);
@@ -550,15 +540,15 @@ public class Vessel_Scope_Processing {
         return(ptList);
     }
     
-    public static void InitResults(String outDirResults) throws IOException {
+    public void InitResults(String outDirResults) throws IOException {
         // initialize results files
         // Detailed results
-        FileWriter  fwAnalyze_detail = new FileWriter(outDirResults + autoBackground +"_results.xls",false);
-        output_detail_Analyze = new BufferedWriter(fwAnalyze_detail);
+        FileWriter  fwAnalyze_detail = new FileWriter(outDirResults + main.autoBackground +"_results.xls",false);
+        main.output_detail_Analyze = new BufferedWriter(fwAnalyze_detail);
         // write results headers
-        output_detail_Analyze.write("Image Name\t#Cell\tCell Vol (pixel3)\tCell Z center\tCell Integrated intensity in gene X channel\tMean background intensity in X channel\t"
+        main.output_detail_Analyze.write("Image Name\t#Cell\tCell Vol (pixel3)\tCell Z center\tCell Integrated intensity in gene X channel\tMean background intensity in X channel\t"
                 + "Total dots gene X (based on cell intensity)\tDots X volume (pixel3)\tIntegrated intensity of dots X channel\tTotal dots gene X (based on dots seg intensity)\n");
-        output_detail_Analyze.flush();
+        main.output_detail_Analyze.flush();
     }
     
     /**
@@ -568,7 +558,7 @@ public class Vessel_Scope_Processing {
      * @param outDirResults
      * @param rootName
      */
-    public static void saveCells (ImagePlus imgVessel, Objects3DPopulation cellsPop, String outDirResults, String rootName) {
+    public void saveCells (ImagePlus imgVessel, Objects3DPopulation cellsPop, String outDirResults, String rootName) {
         ImagePlus imgColorPop = colorPop (cellsPop, imgVessel);
         IJ.run(imgColorPop, "3-3-2 RGB", "");
         FileSaver ImgColorObjectsFile = new FileSaver(imgColorPop);
@@ -585,7 +575,7 @@ public class Vessel_Scope_Processing {
      * @param outDirResults
      * @param rootName
      */
-    public static void saveCellsLabelledImage (ImagePlus imgVessel, Objects3DPopulation cellsPop, Objects3DPopulation dotsPop, ImagePlus imgGeneX,
+    public void saveCellsLabelledImage (ImagePlus imgVessel, Objects3DPopulation cellsPop, Objects3DPopulation dotsPop, ImagePlus imgGeneX,
             String outDirResults, String rootName) {
         // red geneRef , green geneX, blue nucDilpop
         ImageHandler imgCells = ImageHandler.wrap(imgVessel).createSameDimensions();
@@ -598,7 +588,7 @@ public class Vessel_Scope_Processing {
         dotsPop.draw(imgDots, 255);
         ImagePlus[] imgColors = {imgCells.getImagePlus(), imgDots.getImagePlus(), null, imgGeneX, null, null, imgCellLabels};
         ImagePlus imgObjects = new RGBStackMerge().mergeHyperstacks(imgColors, false);
-        imgObjects.setCalibration(cal);
+        imgObjects.setCalibration(main.cal);
         IJ.run(imgObjects, "Enhance Contrast", "saturated=0.35");
 
         // Save images
@@ -616,7 +606,7 @@ public class Vessel_Scope_Processing {
      * @param outDirResults
      * @param rootName
      */
-    public static void saveDotsImage (ImagePlus imgVessel, Objects3DPopulation cellsPop, Objects3DPopulation geneXPop,
+    public void saveDotsImage (ImagePlus imgVessel, Objects3DPopulation cellsPop, Objects3DPopulation geneXPop,
             String outDirResults, String rootName) {
         // red dots geneRef , dots green geneX, blue nucDilpop
         ImageHandler imgCells = ImageHandler.wrap(imgVessel).createSameDimensions();
@@ -628,7 +618,7 @@ public class Vessel_Scope_Processing {
         geneXPop.draw(imgDotsGeneX, 255);
         ImagePlus[] imgColors = {imgCells.getImagePlus(), imgDotsGeneX.getImagePlus(), null, imgVessel, imgCellNumbers.getImagePlus()};
         ImagePlus imgObjects = new RGBStackMerge().mergeHyperstacks(imgColors, false);
-        imgObjects.setCalibration(cal);
+        imgObjects.setCalibration(main.cal);
         IJ.run(imgObjects, "Enhance Contrast", "saturated=0.35");
 
         // Save images

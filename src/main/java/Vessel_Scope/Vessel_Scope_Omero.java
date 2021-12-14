@@ -22,15 +22,8 @@ import static Vessel_Scope_Utils.OmeroConnect.addFileAnnotation;
 import static Vessel_Scope_Utils.OmeroConnect.gateway;
 import static Vessel_Scope_Utils.OmeroConnect.getImageZ;
 import static Vessel_Scope_Utils.OmeroConnect.securityContext;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.InitResults;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.closeImages;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.findGenePop;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.findVessel;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.findRoiBackgroundAuto;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.saveCells;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.saveCellsLabelledImage;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.saveDotsImage;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.tagsCells;
+import Vessel_Scope_Utils.Vessel_Scope_Processing;
+
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
@@ -68,6 +61,8 @@ public class Vessel_Scope_Omero implements PlugIn {
     private String tempDir = System.getProperty("java.io.tmpdir");
     private String outDirResults = tempDir+File.separator+"resulst.xls";
     
+    private Vessel_Scope_Utils.Vessel_Scope_Processing process = new Vessel_Scope_Processing();
+
     
     
     
@@ -76,7 +71,7 @@ public class Vessel_Scope_Omero implements PlugIn {
         try {
             ArrayList<String> ch = new ArrayList();
             // initialize results files
-            InitResults(outDirResults);
+            process.InitResults(outDirResults);
             
             for (ImageData image : imageData) {
                 if (image.getName().endsWith(".nd")) {
@@ -105,7 +100,7 @@ public class Vessel_Scope_Omero implements PlugIn {
                         List<omero.model.Roi> rois = OmeroConnect.getImageRois(image);
 
                         // Find gene X dots
-                        Objects3DPopulation geneXDots = findGenePop(imgGeneX, null);
+                        Objects3DPopulation geneXDots = process.findGenePop(imgGeneX, null);
                         System.out.println(geneXDots.getNbObjects() + " gene dots X found");
                         
                         // find background from roi
@@ -133,7 +128,7 @@ public class Vessel_Scope_Omero implements PlugIn {
                                 break;
                             // automatic search roi from calibration values     
                             case "Auto" :
-                                roiGeneX = findRoiBackgroundAuto(imgGeneX, calibBgGeneX);
+                                roiGeneX = process.findRoiBackgroundAuto(imgGeneX, calibBgGeneX);
                                 break;
                             case "From calibration" :
                                 roiGeneX = null;
@@ -149,10 +144,10 @@ public class Vessel_Scope_Omero implements PlugIn {
 
 
                         Objects3DPopulation cellsPop = new Objects3DPopulation();
-                        cellsPop = findVessel(imgVessel, null);
+                        cellsPop = process.findVessel(imgVessel, null);
 
                         // Find cells parameters in geneRef and geneX images
-                        ArrayList<Cell> listCells = tagsCells(cellsPop, geneXDots, imgGeneX, roiGeneX);
+                        ArrayList<Cell> listCells = process.tagsCells(cellsPop, geneXDots, imgGeneX, roiGeneX);
 
 
                         // write results for each cell population
@@ -165,28 +160,28 @@ public class Vessel_Scope_Omero implements PlugIn {
                         }
 
                         // Save labelled nucleus
-                        saveCellsLabelledImage(imgVessel, cellsPop, geneXDots, imgGeneX, outDirResults, rootName);
+                        process.saveCellsLabelledImage(imgVessel, cellsPop, geneXDots, imgGeneX, outDirResults, rootName);
 
                         // import  to Omero server
                         addImageToDataset(selectedProject, selectedDataset, outDirResults, rootName + "_Objects.tif", true);
                         new File(outDirResults + rootName + "_Objects.tif").delete();
 
                         // save random color nucleus popualation
-                        saveCells(imgVessel, cellsPop, outDirResults, rootName);
+                        process.saveCells(imgVessel, cellsPop, outDirResults, rootName);
 
                         // import to Omero server
                         addImageToDataset(selectedProject, selectedDataset, outDirResults, rootName + "_Nucleus-ColorObjects.tif", true);
                         new File(outDirResults + rootName + "_Nucleus-ColorObjects.tif").delete();
                         
                         // save dots segmentations
-                        saveDotsImage (imgVessel, cellsPop, geneXDots, outDirResults, rootName);
+                        process.saveDotsImage (imgVessel, cellsPop, geneXDots, outDirResults, rootName);
                         
                         // import to Omero server
                         addImageToDataset(selectedProject, selectedDataset, outDirResults, rootName + "_DotsObjects.tif", true);
                         new File(outDirResults + rootName + "_DotsObjects.tif").delete();
 
-                        closeImages(imgVessel);
-                        closeImages(imgGeneX);
+                        process.closeImages(imgVessel);
+                        process.closeImages(imgGeneX);
                         
 
                     } catch (DSOutOfServiceException | ExecutionException | DSAccessException | ParserConfigurationException | SAXException | IOException ex) {

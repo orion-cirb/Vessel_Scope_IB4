@@ -10,6 +10,7 @@ import static Vessel_Scope.Vessel_Scope_Main.imagesFolder;
 import static Vessel_Scope.Vessel_Scope_Main.output_detail_Analyze;
 import static Vessel_Scope.Vessel_Scope_Main.removeSlice;
 import Vessel_Scope_Utils.Cell;
+import Vessel_Scope_Utils.Vessel_Scope_Processing;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.gui.Roi;
@@ -34,15 +35,6 @@ import loci.plugins.in.ImporterOptions;
 import mcib3d.geom.Objects3DPopulation;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.ArrayUtils;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.InitResults;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.closeImages;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.findGenePop;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.findVessel;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.findRoiBackgroundAuto;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.saveCells;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.saveCellsLabelledImage;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.saveDotsImage;
-import static Vessel_Scope_Utils.Vessel_Scope_Processing.tagsCells;
 import java.util.Collections;
 
 
@@ -52,6 +44,7 @@ import java.util.Collections;
  */
 public class Vessel_Scope_Local implements PlugIn {
     
+private Vessel_Scope_Utils.Vessel_Scope_Processing process = new Vessel_Scope_Processing();
     
     @Override
     public void run(String arg) {
@@ -63,7 +56,7 @@ public class Vessel_Scope_Local implements PlugIn {
                     outDir.mkdir();
                 }
                 // initialize results files
-                InitResults(outDirResults);
+                process.InitResults(outDirResults);
                 String rootName = "";
                 
                 // create OME-XML metadata store of the latest schema version
@@ -123,7 +116,7 @@ public class Vessel_Scope_Local implements PlugIn {
                             break;
                         // automatic search roi from calibration values     
                         case "Auto" :
-                            roiGeneX = findRoiBackgroundAuto(imgGeneX, calibBgGeneX);
+                            roiGeneX = process.findRoiBackgroundAuto(imgGeneX, calibBgGeneX);
                             break;
                         case "From calibration" :
                             roiGeneX = null;
@@ -142,7 +135,7 @@ public class Vessel_Scope_Local implements PlugIn {
                     }
 
                     //Find gene X dots
-                    Objects3DPopulation geneXDots = findGenePop(imgGeneX, rois);
+                    Objects3DPopulation geneXDots = process.findGenePop(imgGeneX, rois);
                     System.out.println("Finding gene "+geneXDots.getNbObjects()+" X dots");
 
                     /*
@@ -155,10 +148,10 @@ public class Vessel_Scope_Local implements PlugIn {
                     // if no dilatation find cells with cellOutliner on gene reference image
                     // else dilate nucleus
 
-                    Objects3DPopulation cellsPop = findVessel(imgVessel, rois);
+                    Objects3DPopulation cellsPop = process.findVessel(imgVessel, rois);
 
                     // Find cells parameters in geneX images
-                    ArrayList<Cell> listCells = tagsCells(cellsPop, geneXDots, imgGeneX, roiGeneX);
+                    ArrayList<Cell> listCells = process.tagsCells(cellsPop, geneXDots, imgGeneX, roiGeneX);
 
                     // write results for each cell population
                     for (int n = 0; n < listCells.size(); n++) {
@@ -170,16 +163,16 @@ public class Vessel_Scope_Local implements PlugIn {
                     }
                     
                     // Save labelled vessel
-                    saveCellsLabelledImage(imgVessel, cellsPop, geneXDots, imgGeneX, outDirResults, rootName);
+                    process.saveCellsLabelledImage(imgVessel, cellsPop, geneXDots, imgGeneX, outDirResults, rootName);
 
                     // save random color vessel population
-                    saveCells(imgVessel, cellsPop, outDirResults, rootName);
+                    process.saveCells(imgVessel, cellsPop, outDirResults, rootName);
 
                     // save dots segmented objects
-                    saveDotsImage (imgVessel, cellsPop, geneXDots, outDirResults, rootName);
+                    process.saveDotsImage (imgVessel, cellsPop, geneXDots, outDirResults, rootName);
 
-                    closeImages(imgVessel);
-                    closeImages(imgGeneX);
+                    process.closeImages(imgVessel);
+                    process.closeImages(imgGeneX);
                 }
                 if (new File(outDirResults + "detailed_results.xls").exists())
                     output_detail_Analyze.close();
