@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Vessel_Scope_Utils;
+package Vessel_Scope_IB4_Utils;
 
 import ij.gui.Roi;
 
