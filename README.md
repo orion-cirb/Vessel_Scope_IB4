@@ -17,7 +17,7 @@
 
 * Detect vessels with LoG + thresholding
 * Detect RNA dots with Stardist
-* Calibration procedure to quantify RNA single dots --> **WORK IN PROGRESS**
+* Calibration procedure to quantify RNA single dots **--> WORK IN PROGRESS**
 * Find RNA in/out dilated vessels
 * Measure vessels volume + RNA dots volume and intensity in/out vessels
 
